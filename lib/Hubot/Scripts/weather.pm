@@ -1,6 +1,7 @@
 package Hubot::Scripts::weather;
 use utf8;
 use Encode qw(encode decode);
+use Text::ASCIITable;
 
 my $local;
 my $local_num;
@@ -13,6 +14,7 @@ my %locals = (
     "06" => "경상남도 경상북도",
     "07" => "제주도 제주특별자치도",
 );
+my $announcementtime;
 
 sub load {
     my ( $class, $robot ) = @_;
@@ -53,13 +55,22 @@ sub load {
                     my ( $body, $hdr ) = @_;
                     return if ( !$body || $hdr->{Status} !~ /^2/ );
                     my $decode_body = decode("euc-kr", $body);
-                    if ( $decode_body =~ m{<p class="mid_announcementtime fr">.*?<span>(2013년 05월 20일 \(월\)요일 18:00 발표)</span></p>} ) {
+                    if ( $decode_body =~ m{<p class="mid_announcementtime fr">.*?<span>(.*?)</span></p>} ) {
                         my $announcementtime = $1;
                         $msg->send("$announcementtime");
                     }
                     if ( $decode_body =~ m{<th scope="row">(.+)</th>} ) {
-                        #$msg->send("$1");
+                        my $city = $1;
+                        my @weather_info;
+                        if ( $city eq $local ) {
+                            push @weather_info, $local;
+                            $msg->send("matched $city");
+                        }
                     }
+                    my $table = Text::ASCIITable->new({
+                                headingText => "최저/최고기온 $announcementtime",
+                                });
+                    $table->setCols(qw/ 도시  /);
                 }
             )
             #$msg->send("$local"); 
