@@ -2,9 +2,11 @@ package Hubot::Scripts::weather;
 use utf8;
 use Encode qw(encode decode);
 use Text::ASCIITable;
+use Text::CharWidth qw( mbswidth );
 
 my $local;
 my $local_num;
+my $announcementtime;
 my %locals = (
     "01" => "전국",
     "02" => "서울 경기도 인천",
@@ -56,7 +58,7 @@ sub load {
                     return if ( !$body || $hdr->{Status} !~ /^2/ );
                     my $decode_body = decode("euc-kr", $body);
                     if ( $decode_body =~ m{<p class="mid_announcementtime fr">.*?<span>(.*?)</span></p>} ) {
-                        my $announcementtime = $1;
+                        $announcementtime = $1;
                         #$msg->send("$announcementtime");
                     }
                     if ( $decode_body =~ m{<th scope="row">(.+)</th>} ) {
@@ -69,25 +71,13 @@ sub load {
                     }
                     my @days_info = $decode_body =~ m{<th scope="col"  class="top_line" style=".*?">(.*?)</th>}mgs;  
 
-=pod
-                    foreach my $day_p ( @days_info ) {
-                       my $de_day = decode ("euc-kr", $day_p);
-                       push my @de_days_info, $de_day;
-                    }
-                    if ( $decode_body =~ m{<th scope="col"  class="top_line" style=".*?">(.*?)</th>} ) {
-                        my $day = $1;
-                        my @days_info, $day;
-                        $msg->send("@days_info");
-                        #$msg->send("$day");
-                    }
-=cut
-                    #$msg->send("@days_info");
                     my $table = Text::ASCIITable->new({
-                                #headingText => "최저/최고기온 $announcementtime",
-                                headingText => "high/row",
+                                utf8=>0,
+                                headingText => "최저/최고기온(℃ )[$announcementtime]",
+                                cb_count    => sub { mbswidth(shift) },
                                 });
-                    #$table->setCols(qw/도시 $de_days_info[0] $de_days_info[1] $de_days_info[2] $de_days_info[3] $de_days_info[4] $de_days_info[5]/);
-                    $table->setCols(qw/1 2 3 4/);
+                    $table->setCols("도시", "$days_info[0]", "$days_info[1]", "$days_info[2]", "$days_info[3]", "$days_info[4]", "$days_info[5]");
+                    $msg->send("\n");
                     $msg->send("$table");
                 }
             )
