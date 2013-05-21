@@ -57,20 +57,38 @@ sub load {
                     my $decode_body = decode("euc-kr", $body);
                     if ( $decode_body =~ m{<p class="mid_announcementtime fr">.*?<span>(.*?)</span></p>} ) {
                         my $announcementtime = $1;
-                        $msg->send("$announcementtime");
+                        #$msg->send("$announcementtime");
                     }
                     if ( $decode_body =~ m{<th scope="row">(.+)</th>} ) {
                         my $city = $1;
                         my @weather_info;
                         if ( $city eq $local ) {
                             push @weather_info, $local;
-                            $msg->send("matched $city");
+                            #$msg->send("matched $city");
                         }
                     }
+                    my @days_info = $decode_body =~ m{<th scope="col"  class="top_line" style=".*?">(.*?)</th>}mgs;  
+
+=pod
+                    foreach my $day_p ( @days_info ) {
+                       my $de_day = decode ("euc-kr", $day_p);
+                       push my @de_days_info, $de_day;
+                    }
+                    if ( $decode_body =~ m{<th scope="col"  class="top_line" style=".*?">(.*?)</th>} ) {
+                        my $day = $1;
+                        my @days_info, $day;
+                        $msg->send("@days_info");
+                        #$msg->send("$day");
+                    }
+=cut
+                    #$msg->send("@days_info");
                     my $table = Text::ASCIITable->new({
-                                headingText => "최저/최고기온 $announcementtime",
+                                #headingText => "최저/최고기온 $announcementtime",
+                                headingText => "high/row",
                                 });
-                    $table->setCols(qw/ 도시  /);
+                    #$table->setCols(qw/도시 $de_days_info[0] $de_days_info[1] $de_days_info[2] $de_days_info[3] $de_days_info[4] $de_days_info[5]/);
+                    $table->setCols(qw/1 2 3 4/);
+                    $msg->send("$table");
                 }
             )
             #$msg->send("$local"); 
