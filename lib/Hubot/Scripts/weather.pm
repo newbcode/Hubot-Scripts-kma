@@ -7,6 +7,8 @@ use Text::CharWidth qw( mbswidth );
 my $local;
 my $local_num;
 my $announcementtime;
+my $city;
+
 my %locals = (
     "01" => "전국",
     "02" => "서울 경기도 인천",
@@ -53,7 +55,6 @@ sub load {
             }
             $msg->http("http://www.kma.go.kr/weather/forecast/mid-term_$local_num.jsp")->get(
                 sub {
-                    my %temp;
                     my ( $body, $hdr ) = @_;
                     return if ( !$body || $hdr->{Status} !~ /^2/ );
                     my $decode_body = decode("euc-kr", $body);
@@ -61,24 +62,41 @@ sub load {
                         $announcementtime = $1;
                         #$msg->send("$announcementtime");
                     }
+=pod
                     if ( $decode_body =~ m{<th scope="row">(.+)</th>} ) {
-                        my $city = $1;
+                        $city = $1;
                         my @weather_info;
                         if ( $city eq $local ) {
                             push @weather_info, $local;
                             #$msg->send("matched $city");
                         }
                     }
+=cut
+                    my @city_info = $decode_body =~ m{<th scope="row">(.*?)</th>}gsm;
+                    my $city_num = $#city_info;
                     my @days_info = $decode_body =~ m{<th scope="col"  class="top_line" style=".*?">(.*?)</th>}mgs;  
+                    my @temp_info = $decode_body =~ m{<li><span class="col_blue">(\d+)</span> / <span class="col_orange">(\d+)</span></li>}mgs;  
+
+                    my %temp_info = (
+                            for ( my $cnt = 0; $cnt <= $city_num; $cnt++ ) {
+                                $city_info[$cnt] => [
+                                    {
+                                        "$days_info[$cnt]" => "
+                                    }
+                                ]
+                            }
 
                     my $table = Text::ASCIITable->new({
                                 utf8=>0,
                                 headingText => "최저/최고기온(℃ )[$announcementtime]",
                                 cb_count    => sub { mbswidth(shift) },
                                 });
+=pod
                     $table->setCols("도시", "$days_info[0]", "$days_info[1]", "$days_info[2]", "$days_info[3]", "$days_info[4]", "$days_info[5]");
+                    $table->addRow("$city");
                     $msg->send("\n");
                     $msg->send("$table");
+=cut
                 }
             )
             #$msg->send("$local"); 
