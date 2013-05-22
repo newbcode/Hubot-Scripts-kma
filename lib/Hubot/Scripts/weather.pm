@@ -1,5 +1,7 @@
 package Hubot::Scripts::weather;
+
 use utf8;
+use Data::Dumper;
 use Encode qw(encode decode);
 use Text::ASCIITable;
 use Text::CharWidth qw( mbswidth );
@@ -49,7 +51,6 @@ sub load {
             $local = $msg->match->[0];
             foreach my $local_p ( keys(%locals) ) {
                 if ( $locals{$local_p} =~ /$local/ ) {
-                    #$msg->send("matched $local");
                     $local_num = $local_p;
                 }
             }
@@ -60,43 +61,32 @@ sub load {
                     my $decode_body = decode("euc-kr", $body);
                     if ( $decode_body =~ m{<p class="mid_announcementtime fr">.*?<span>(.*?)</span></p>} ) {
                         $announcementtime = $1;
-                        #$msg->send("$announcementtime");
                     }
-=pod
-                    if ( $decode_body =~ m{<th scope="row">(.+)</th>} ) {
-                        $city = $1;
-                        my @weather_info;
-                        if ( $city eq $local ) {
-                            push @weather_info, $local;
-                            #$msg->send("matched $city");
-                        }
-                    }
-=cut
-                    my @city_info = $decode_body =~ m{<th scope="row">(.*?)</th>}gsm;
-                    my $city_num = $#city_info;
-                    my @days_info = $decode_body =~ m{<th scope="col"  class="top_line" style=".*?">(.*?)</th>}mgs;  
-                    my @temp_info = $decode_body =~ m{<li><span class="col_blue">(\d+)</span> / <span class="col_orange">(\d+)</span></li>}mgs;  
 
-                    my %temp_info = (
-                            for ( my $cnt = 0; $cnt <= $city_num; $cnt++ ) {
-                                $city_info[$cnt] => [
-                                    {
-                                        "$days_info[$cnt]" => "
-                                    }
-                                ]
-                            }
+                    my $cnt = 0;
+                    my $row_high_temp;
+                    my @temp_info;
+                    my %weather_hash;
+
+                    my @city_info = $decode_body =~ m{<th scope="row">(.*?)</th>}gsm;
+                    my @days_info = $decode_body =~ m{<th scope="col"  class="top_line" style=".*?">(.*?)</th>}mgs;  
+                    while ( $decode_body =~ m{<li><span class="col_blue">(\d+)</span> (/) <span class="col_orange">(\d+)</span></li>}mgs ) {
+                        $row_high_temp = "$1"."$2"."$3";     
+                        push @temp_info, $row_high_temp;
+                    }
+
+                    map { $weather_hash{$_} = { $days_info[$cnt] => $temp_info[$cnt++]} } @city_info;
+                    print Dumper \%weather_hash;
 
                     my $table = Text::ASCIITable->new({
                                 utf8=>0,
                                 headingText => "최저/최고기온(℃ )[$announcementtime]",
                                 cb_count    => sub { mbswidth(shift) },
                                 });
-=pod
                     $table->setCols("도시", "$days_info[0]", "$days_info[1]", "$days_info[2]", "$days_info[3]", "$days_info[4]", "$days_info[5]");
-                    $table->addRow("$city");
+                    $table->addRow("$local", "$weather_hash{$days_info[1]}{$temp_info[1]}");
                     $msg->send("\n");
                     $msg->send("$table");
-=cut
                 }
             )
             #$msg->send("$local"); 
