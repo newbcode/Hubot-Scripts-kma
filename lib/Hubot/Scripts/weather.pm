@@ -6,37 +6,46 @@ use Encode qw(encode decode);
 use Text::ASCIITable;
 use Text::CharWidth qw( mbswidth );
 
-my %locals = (
+#
+# 지역을 해쉬로 담아서 사용
+#
+my %countris = (
     "01" => "전국",
-    "02" => "서울 경기도 인천",
-    "03" => "강원도",
-    "04" => "충청남도 충청북도",
-    "05" => "전라남도 전라북도",
-    "06" => "경상남도 경상북도",
-    "07" => "제주도 제주특별자치도",
+    "02" => "경기도 서울 인천 수원 문산",
+    "03" => "강원도 춘천 강릉",
+    "04" => "충청남도 충청북도 대전 서산 청주",
+    "05" => "전라남도 전라북도 광주 목포 여수 전주",
+    "06" => "경상남도 경상북도 부산 울산 창원 대구 안동",
+    "07" => "제주도 제주특별자치도 제주 서귀포",
 );
 
 sub load {
     my ( $class, $robot ) = @_;
  
     $robot->hear(
-        #qr/^local (서울|경기도|인천|강원도|충청남도|충청북도|전라남도|전라북도|경상남도|경상북도|제주도|제주특별자치도)/i,    
-        qr/^weather weekly (서울)/i,    
-        \&_process,
+        qr/^weather weekly (.*)/i,    
+        \&parser_process,
     );
 }
 
-sub _process {
+sub parser_process {
     my $msg = shift;
 
     my $user_input = $msg->match->[0];
-    my $local_num;
-    for my $local_p ( keys %locals ) {
-        if ( $locals{$local_p} =~ /$user_input/ ) {
-            $local_num = $local_p;
+    my @citynames = split (/ /, $user_input );
+    my @country_numbers;
+    #$msg->send("@citynames");
+    for my $country ( keys %countris ) {
+        for my $cityname ( @citynames ) {
+            if ( $countris{$country} =~ /$cityname/ ) {
+                $country_number = $country;
+                $msg->send("$country_number");
+                push @country_numbers, $country_number;
+            }
         }
     }
-    $msg->http("http://www.kma.go.kr/weather/forecast/mid-term_$local_num.jsp")->get(
+    for my $page_num ( @country_numbers ) {
+        $msg->http("http://www.kma.go.kr/weather/forecast/mid-term_$page_num.jsp")->get(
         sub {
             my ( $body, $hdr ) = @_;
 
@@ -58,7 +67,10 @@ sub _process {
             while ( $decode_body =~ m{<li><span class="col_blue">(\d+)</span> / <span class="col_orange">(\d+)</span></li>}gms ) {
                 push @temperatures, "$1/$2";
             }
-
+            #
+            #$weather($city)가 첫번쨰 불릴때는 당연히 FALSE인데 초기값을 
+            #arrayref 넣고 다음부터 참조될때는 arrayref니까 @{}로 보간된 ref를 풀고 push를 함
+            #
             my %weather;
             for my $city (@cities) {
                 for ( 1 .. @days ) {
@@ -81,20 +93,18 @@ sub _process {
 
                 $table->addRow( $city, @{ $weather{$city}} );
             }
-
             $msg->send("\n");
             $msg->send("$table");
         }
-    )
-    #$msg->send("$local"); 
+        );
+    }
 }
-
  
 1;
  
 =head1 SYNOPSIS
  
-    weather weekly - kma info 
+    weather weekly country1 country2 ... - input country name 
  
 =cut
 
@@ -103,11 +113,11 @@ sub _process {
 
 __DATA__
 
-                            $weather{$city} = [] unless $weather{$city};
-                            push @{ $weather{$city} }, shift(@temperatures);
+ $weather{$city} = [] unless $weather{$city};
+ push @{ $weather{$city} }, shift(@temperatures);
 
-                            $weather{$city} ||= [];
-                            push @{ $weather{$city} }, shift(@temperatures);
+ $weather{$city} ||= [];
+ push @{ $weather{$city} }, shift(@temperatures);
 
-                            $weather{$city} = $weather{$city} || [];
-                            push @{ $weather{$city} }, shift(@temperatures);
+ $weather{$city} = $weather{$city} || [];
+ push @{ $weather{$city} }, shift(@temperatures);
