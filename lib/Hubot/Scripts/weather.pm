@@ -11,22 +11,36 @@ use Text::CharWidth qw( mbswidth );
 #
 my %countris = (
     "01" => "전국",
-    "02" => "경기도 서울 인천 수원 문산",
-    "03" => "강원도 춘천 강릉",
-    "04" => "충청남도 충청북도 대전 서산 청주",
-    "05" => "전라남도 전라북도 광주 목포 여수 전주",
-    "06" => "경상남도 경상북도 부산 울산 창원 대구 안동",
-    "07" => "제주도 제주특별자치도 제주 서귀포",
+    "02" => "서울 인천 수원 문산",
+    "03" => "춘천 강릉",
+    "04" => "대전 서산 청주",
+    "05" => "광주 목포 여수 전주",
+    "06" => "부산 울산 창원 대구 안동",
+    "07" => "제주 서귀포",
+);
+
+my %paldos = (
+    "01" => "전국",
+    "02" => "서울 경기도",
+    "03" => "강원도",
+    "04" => "충청남도 충청북도",
+    "05" => "전라남도 전라북도",
+    "06" => "경상남도 경상북도",
+    "07" => "제주도 제주특별자치도",
 );
 
 sub load {
     my ( $class, $robot ) = @_;
  
     $robot->hear(
-        #qr/^weather weekly (.+)/i,    
-        qr/^w (.+)/i,    
+        qr/^weather weekly (.+)/i,    
         \&city_process,
     );
+    $robot->hear(
+        qr/^weather forecast (.+)/i,    
+        \&fore_process,
+    );
+
 }
 
 sub city_process {
@@ -103,25 +117,52 @@ sub city_process {
         }
     }
 }
- 
+
+sub fore_process {
+    my $msg = shift;
+
+    my $user_input = $msg->match->[0];
+
+    for my $paldo ( keys %paldos ) {
+        if ( $paldos{$paldo} =~ /$user_input/ ) {
+        $msg->http("http://www.kma.go.kr/weather/forecast/mid-term_$paldo.jsp")->get(
+            sub {
+                my ( $body, $hdr ) = @_;
+
+                return if ( !$body || $hdr->{Status} !~ /^2/ );
+
+                my $announcementtime = $1;
+                my $decode_body = decode("euc-kr", $body);
+                if ( $decode_body =~ m{<p class="mid_announcementtime fr">.*?<span>(.*?)</span></p>} ) {
+                     $announcementtime = $1;
+                }
+                my @forecast;
+                if ( $decode_body =~ m{<p class="text">(.*?)</p>} ) {
+                     my $parser = $1; 
+                     @forecast = split (/<br \/>/, $parser);
+                }
+
+                my $table = Text::ASCIITable->new({
+                utf8        => 0,
+                headingText => "기상전망($paldos{$paldo}) - [$announcementtime]",
+                cb_count    => sub { mbswidth(shift) },
+                });
+                $table->setCols($paldos{$paldo});
+                for my $cast ( @forecast ) { $table->addRow($cast); }
+                $msg->send("\n"), $msg->send($table);
+                }
+            );
+        }
+    }    
+}
+
 1;
  
 =head1 SYNOPSIS
  
-    weather weekly country1 country2 ... - input country name 
+    This is scripts only support korean. 
+    weather weekly [country] ... - input country name 
+    weather weekly [country1] [country2] [country3] ... - input country name 
+    weather forecast [paldo] (ex: kangwon-do or gyeonggi-do) ... - input country name 
  
 =cut
-
-
-
-
-__DATA__
-
- $weather{$city} = [] unless $weather{$city};
- push @{ $weather{$city} }, shift(@temperatures);
-
- $weather{$city} ||= [];
- push @{ $weather{$city} }, shift(@temperatures);
-
- $weather{$city} = $weather{$city} || [];
- push @{ $weather{$city} }, shift(@temperatures);
