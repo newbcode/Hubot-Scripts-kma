@@ -23,13 +23,13 @@ sub load {
     my ( $class, $robot ) = @_;
  
     $robot->hear(
-        #qr/^weather weekly (.*)/i,    
-        qr/^w (.*)/i,    
-        \&parser_process,
+        #qr/^weather weekly (.+)/i,    
+        qr/^w (.+)/i,    
+        \&city_process,
     );
 }
 
-sub parser_process {
+sub city_process {
     my $msg = shift;
 
     my $count = 0;
@@ -44,7 +44,6 @@ sub parser_process {
             $msg->http("http://www.kma.go.kr/weather/forecast/mid-term_$country.jsp")->get(
                     sub {
                         my ( $body, $hdr ) = @_;
-                        $msg->send('in sub callback');
 
                         return if ( !$body || $hdr->{Status} !~ /^2/ );
 
@@ -87,9 +86,13 @@ sub parser_process {
                         }
                         $count++;
                         for my $city (keys %weather) {
-                            next unless $cityname eq $city;
-
-                            $table->addRow( $city, @{ $weather{$city}} );
+                            #next unless $cityname eq $city;
+                            if ( $cityname eq '전국' ) {
+                                $table->addRow( $city, @{ $weather{$city}} );
+                            }
+                            elsif ( $cityname eq $city ){
+                                $table->addRow( $city, @{ $weather{$city}} );
+                            }
                         }
                         if ($count == $#citynames + 1) {
                             $msg->send("\n"), $msg->send($table);
