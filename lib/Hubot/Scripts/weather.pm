@@ -123,6 +123,7 @@ sub fore_process {
 
     my $user_input = $msg->match->[0];
 
+    my $caution = 'on';
     for my $paldo ( keys %paldos ) {
         if ( $paldos{$paldo} =~ /$user_input/ ) {
         $msg->http("http://www.kma.go.kr/weather/forecast/mid-term_$paldo.jsp")->get(
@@ -152,8 +153,10 @@ sub fore_process {
                 $msg->send("\n"), $msg->send($table);
                 }
             );
+        $caution = 'off';
         }
     }    
+    $msg->send($user_input . " 지역은 기상정보가 없습니다.") if $caution eq 'on' ;
 }
 
 1;
