@@ -48,11 +48,24 @@ sub city_process {
 
     my $count = 0;
     my $table;
-    my $wrong_input;
     my $user_input = $msg->match->[0];
     my @citynames = split (/ /, $user_input );
-    #my @country_numbers;
-    #pop @cityname unless if ($wrong_input =~ (values %countries) );
+    my $val_citys = join (' ', values %countris);
+    my @val_cities = split (/ /, $val_citys);
+    #my @val_cities = split (/ /, [join (' ', values %countris)]);
+    p @val_cities;
+    
+    for my $check_city ( @val_cities ) {
+        #$msg->send($check_city . 'check city');
+        for my $wrong_input ( @citynames ) {
+            if ( $wrong_input =~ /$check_city/ ) {
+                $msg->send($wrong_input . 'true');
+            }
+            else {
+                $msg->send($wrong_input . 'false');
+            }
+        }
+    }
 
     for my $country ( keys %countris ) {
         for my $cityname ( @citynames ) {
@@ -115,8 +128,8 @@ sub city_process {
                             }
                             elsif ( $cityname eq $city ) {
                                 $table->addRow( $city, @{ $weather{$city}} );
-                                $table->addRow( '오전', @am_weathers );
-                                $table->addRow( '오후', @pm_weathers );
+                                $table->addRow( '  ', @am_weathers );
+                                $table->addRow( '  ', @pm_weathers );
                             }
                         }
                         if ($count == scalar (@citynames)) {
