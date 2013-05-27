@@ -48,9 +48,11 @@ sub city_process {
 
     my $count = 0;
     my $table;
+    my $wrong_input;
     my $user_input = $msg->match->[0];
     my @citynames = split (/ /, $user_input );
-    my @country_numbers;
+    #my @country_numbers;
+    #pop @cityname unless if ($wrong_input =~ (values %countries) );
 
     for my $country ( keys %countris ) {
         for my $cityname ( @citynames ) {
@@ -71,10 +73,17 @@ sub city_process {
                         # 날씨 정보를 해시화
                         # @temperatures 변수를 만든 후 모두 소모함
                         #
-                        my @cities = $decode_body =~ m{<th scope="row">(.*?)</th>}gsm;
-                        my @days   = $decode_body =~ m{<th scope="col"  class="top_line" style=".*?">(.*?)</th>}gsm; 
+                        my @am_weathers;
+                        my @pm_weathers;
+                        while ( $decode_body =~ m{<li title="(.*?)">.*?<li title="(.*?)">}gsm ) {
+                            push @am_weathers, "$1";
+                            push @pm_weathers, "$2";
+                        }
+
+                        my @cities   = $decode_body =~ m{<th scope="row">(.*?)</th>}gsm;
+                        my @days     = $decode_body =~ m{<th scope="col"  class="top_line" style=".*?">(.*?)</th>}gsm; 
                         my @temperatures;
-                        while ( $decode_body =~ m{<li><span class="col_blue">(\d+)</span> / <span class="col_orange">(\d+)</span></li>}gms ) {
+                        while ( $decode_body =~ m{<li><span class="col_blue">(\d+)</span> / <span class="col_orange">(\d+)</span></li>}gsm ) {
                             push @temperatures, "$1/$2";
                         }
                         #
@@ -93,7 +102,7 @@ sub city_process {
                         if ( $count == 0 ) {
                                 $table = Text::ASCIITable->new({
                                 utf8        => 0,
-                                headingText => "최저/최고기온(℃ )[$announcementtime]",
+                                headingText => "최저/최고기온(℃ ) 오전/오후 [$announcementtime]",
                                 cb_count    => sub { mbswidth(shift) },
                             });
                         $table->setCols( "도시", @days );
@@ -104,11 +113,13 @@ sub city_process {
                             if ( $cityname eq '전국' ) {
                                 $table->addRow( $city, @{ $weather{$city}} );
                             }
-                            elsif ( $cityname eq $city ){
+                            elsif ( $cityname eq $city ) {
                                 $table->addRow( $city, @{ $weather{$city}} );
+                                $table->addRow( '오전', @am_weathers );
+                                $table->addRow( '오후', @pm_weathers );
                             }
                         }
-                        if ($count == $#citynames + 1) {
+                        if ($count == scalar (@citynames)) {
                             $msg->send("\n"), $msg->send($table);
                         }
                     }
