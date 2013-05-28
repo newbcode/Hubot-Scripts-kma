@@ -5,6 +5,8 @@ use Data::Printer;
 use Encode qw(encode decode);
 use Text::ASCIITable;
 use Text::CharWidth qw( mbswidth );
+use List::Compare;
+use List::MoreUtils qw(any);
 
 #
 # 지역을 해쉬로 담아서 사용
@@ -49,23 +51,13 @@ sub city_process {
     my $count = 0;
     my $table;
     my $user_input = $msg->match->[0];
-    my @citynames = split (/ /, $user_input );
+    my @input_cities = split (/ /, $user_input );
     my $val_citys = join (' ', values %countris);
     my @val_cities = split (/ /, $val_citys);
-    #my @val_cities = split (/ /, [join (' ', values %countris)]);
-    p @val_cities;
-    
-    for my $check_city ( @val_cities ) {
-        #$msg->send($check_city . 'check city');
-        for my $wrong_input ( @citynames ) {
-            if ( $wrong_input =~ /$check_city/ ) {
-                $msg->send($wrong_input . 'true');
-            }
-            else {
-                $msg->send($wrong_input . 'false');
-            }
-        }
-    }
+    my $lc = List::Compare->new(\@input_cities, \@val_cities);
+
+    my @citynames = $lc->get_intersection;
+    my @union_cities = $lc->get_union;
 
     for my $country ( keys %countris ) {
         for my $cityname ( @citynames ) {
@@ -86,12 +78,8 @@ sub city_process {
                         # 날씨 정보를 해시화
                         # @temperatures 변수를 만든 후 모두 소모함
                         #
-                        my @am_weathers;
-                        my @pm_weathers;
-                        while ( $decode_body =~ m{<li title="(.*?)">.*?<li title="(.*?)">}gsm ) {
-                            push @am_weathers, "$1";
-                            push @pm_weathers, "$2";
-                        }
+                        my @am_weathers = $decode_body =~ m{<li title="(.*?)">.*?<li title=".*?">}gsm;
+                        my @pm_weathers = $decode_body =~ m{<li title=".*?">.*?<li title="(.*?)">}gsm;
 
                         my @cities   = $decode_body =~ m{<th scope="row">(.*?)</th>}gsm;
                         my @days     = $decode_body =~ m{<th scope="col"  class="top_line" style=".*?">(.*?)</th>}gsm; 
@@ -127,9 +115,38 @@ sub city_process {
                                 $table->addRow( $city, @{ $weather{$city}} );
                             }
                             elsif ( $cityname eq $city ) {
-                                $table->addRow( $city, @{ $weather{$city}} );
-                                $table->addRow( '  ', @am_weathers );
-                                $table->addRow( '  ', @pm_weathers );
+                                if ( $country == '02' | $country == '07') {
+                                    $table->addRow( $city, @{ $weather{$city}} );
+                                    $table->addRow( '  ', @am_weathers );
+                                    $table->addRow( '  ', @pm_weathers );
+                                }
+                                elsif ( $country == '03' | $country == '04' | $country == '05' | $country =='06') {
+                                    my $flag = 'on';
+                                    for ( qw/춘천 대전 서산 광주 목포 여수 부산 울산 창원/ ) {
+                                        if ( $_ eq $cityname ) {
+                                        $msg->send('in 1' . $cityname);
+                                            $msg->send('in 1' . $cityname);
+                                            $table->addRow( $city, @{ $weather{$city}} );
+                                            $table->addRow( '  ', $am_weathers[0], $am_weathers[1],
+                                                                $am_weathers[2], $am_weathers[3],
+                                                                $am_weathers[4], $am_weathers[5],);
+                                            $table->addRow( '  ', $pm_weathers[0], $pm_weathers[1],
+                                                                $pm_weathers[2], $pm_weathers[3],
+                                                                $pm_weathers[4], $pm_weathers[5],);
+                                            $flag = 'off'; 
+                                        }
+                                    }
+                                    if ( $flag eq 'on' ) {
+                                        $msg->send('in 2' . $cityname);
+                                        $table->addRow( $city, @{ $weather{$city}} );
+                                        $table->addRow( '  ', $am_weathers[6], $am_weathers[7],
+                                                            $am_weathers[8], $am_weathers[9],
+                                                            $am_weathers[10], $am_weathers[11],);
+                                        $table->addRow( '  ', $pm_weathers[6], $pm_weathers[7],
+                                                            $pm_weathers[8], $pm_weathers[9],
+                                                            $pm_weathers[10], $pm_weathers[11],);
+                                    }
+                                }
                             }
                         }
                         if ($count == scalar (@citynames)) {
