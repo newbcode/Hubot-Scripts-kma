@@ -1,6 +1,8 @@
 package Hubot::Scripts::weather;
 
 use utf8;
+use strict;
+use warnings;
 use Data::Printer;
 use Encode qw(encode decode);
 use Text::ASCIITable;
@@ -120,32 +122,24 @@ sub city_process {
                                     $table->addRow( '  ', @am_weathers );
                                     $table->addRow( '  ', @pm_weathers );
                                 }
-                                elsif ( $country == '03' | $country == '04' | $country == '05' | $country =='06') {
-                                    my $flag = 'on';
-                                    for ( qw/춘천 대전 서산 광주 목포 여수 부산 울산 창원/ ) {
-                                        if ( $_ eq $cityname ) {
-                                        $msg->send('in 1' . $cityname);
-                                            $msg->send('in 1' . $cityname);
-                                            $table->addRow( $city, @{ $weather{$city}} );
-                                            $table->addRow( '  ', $am_weathers[0], $am_weathers[1],
-                                                                $am_weathers[2], $am_weathers[3],
-                                                                $am_weathers[4], $am_weathers[5],);
-                                            $table->addRow( '  ', $pm_weathers[0], $pm_weathers[1],
-                                                                $pm_weathers[2], $pm_weathers[3],
-                                                                $pm_weathers[4], $pm_weathers[5],);
-                                            $flag = 'off'; 
-                                        }
-                                    }
-                                    if ( $flag eq 'on' ) {
-                                        $msg->send('in 2' . $cityname);
-                                        $table->addRow( $city, @{ $weather{$city}} );
-                                        $table->addRow( '  ', $am_weathers[6], $am_weathers[7],
-                                                            $am_weathers[8], $am_weathers[9],
-                                                            $am_weathers[10], $am_weathers[11],);
-                                        $table->addRow( '  ', $pm_weathers[6], $pm_weathers[7],
-                                                            $pm_weathers[8], $pm_weathers[9],
-                                                            $pm_weathers[10], $pm_weathers[11],);
-                                    }
+
+                                elsif ( any { $cityname eq $_ } qw/춘천 대전 서산 광주 목포 여수 부산 울산 창원/ ) {
+                                    $table->addRow( $city, @{ $weather{$city}} );
+                                    $table->addRow( '  ', $am_weathers[0], $am_weathers[1],
+                                                          $am_weathers[2], $am_weathers[3],
+                                                          $am_weathers[4], $am_weathers[5],);
+                                    $table->addRow( '  ', $pm_weathers[0], $pm_weathers[1],
+                                                          $pm_weathers[2], $pm_weathers[3],
+                                                          $pm_weathers[4], $pm_weathers[5],);
+                                }
+                                elsif ( any { $cityname eq $_ } qw/강릉 청주 전주 대구 안동/ ) {
+                                    $table->addRow( $city, @{ $weather{$city}} );
+                                    $table->addRow( '  ', $am_weathers[6], $am_weathers[7],
+                                                          $am_weathers[8], $am_weathers[9],
+                                                          $am_weathers[10], $am_weathers[11],);
+                                    $table->addRow( '  ', $pm_weathers[6], $pm_weathers[7],
+                                                          $pm_weathers[8], $pm_weathers[9],
+                                                          $pm_weathers[10], $pm_weathers[11],);
                                 }
                             }
                         }
