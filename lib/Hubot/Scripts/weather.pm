@@ -44,7 +44,11 @@ sub load {
         qr/^weather forecast (.+)/i,    
         \&fore_process,
     );
-
+    $robot->hear(
+        #qr/^weather today (.+)/i,    
+        qr/^t (.+)/i,    
+        \&today_process,
+    );
 }
 
 sub city_process {
@@ -117,7 +121,7 @@ sub city_process {
                                 $table->addRow( $city, @{ $weather{$city}} );
                             }
                             elsif ( $cityname eq $city ) {
-                                if ( $country == '02' | $country == '07') {
+                                if ( $country == '02' or $country == '07') {
                                     $table->addRow( $city, @{ $weather{$city}} );
                                     $table->addRow( '  ', @am_weathers );
                                     $table->addRow( '  ', @pm_weathers );
@@ -192,6 +196,23 @@ sub fore_process {
         }
     }    
     $msg->send($user_input . " 지역은 기상정보가 없습니다.") if $caution eq 'on' ;
+}
+
+sub today_process {
+    my $msg = shift;
+
+    my $user_input = $msg->match->[0];
+
+    $msg->http("http://www.kma.go.kr/weather/observation/currentweather.jsp")->get(
+        sub {
+                my ( $body, $hdr ) = @_;
+
+                return if ( !$body || $hdr->{Status} !~ /^2/ );
+
+                my $decode_body = decode("euc-kr", $body);
+                $msg->send($decode_body);
+            }
+    );
 }
 
 1;
