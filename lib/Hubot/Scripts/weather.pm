@@ -238,10 +238,11 @@ sub current_process {
                 for my $input_city ( @citynames ) {
                     for my $city ( @cities ) {
                         if ( $input_city eq $city ) {
-                            $msg->send($input_city);
                             @new_status = @status[ $city_cnt*12 .. $status_cnt + $city_cnt ];
+                            grep { s/&nbsp;/waiting/g } @new_status;
+                            p @new_status;
                             $table->addRow($city, @new_status); 
-
+                            last;
                         }
                         $city_cnt++;
                         $status_cnt+=11;
