@@ -45,8 +45,7 @@ sub load {
         \&fore_process,
     );
     $robot->hear(
-        #qr/^weather today (.+)/i,    
-        qr/^t (.+)/i,    
+        qr/^weather current (.+)/i,    
         \&current_process,
     );
 }
@@ -201,12 +200,14 @@ sub fore_process {
 sub current_process {
     my $msg = shift;
 
+    my $index = 1;
+    my $table;
     my $user_input = $msg->match->[0];
     my @input_cities = split (/ /, $user_input );
-    my $index = 1;
     my $last_index = scalar (@input_cities);
+    $msg->send('first' . $index);
 
-    while ( $index <= $last_index ) { 
+    for ( ; $index <= $last_index; $index++) { 
         $msg->http("http://www.kma.go.kr/weather/observation/currentweather.jsp")->get(
         sub {
                 my ( $body, $hdr ) = @_;
@@ -228,7 +229,7 @@ sub current_process {
                 my $status_cnt = 11; 
                 my @new_status; 
 
-                my $table = Text::ASCIITable->new({
+                $table = Text::ASCIITable->new({
                 utf8        => 0,
                 headingText => "현재날씨(종합) 기상실황-[$announcementtime]",
                 cb_count    => sub { mbswidth(shift) },
@@ -236,22 +237,21 @@ sub current_process {
                 $table->setCols(qw/지역 현재일기 시정 운량 중하운량 현재기온 이슬점온도 불쾌지수 일강수 습도 풍향 풍속 해면기압/);
 
                 for my $input_city ( @citynames ) {
-                    for my $city ( @cities ) {
+                LAST: for my $city ( @cities ) {
                         if ( $input_city eq $city ) {
                             @new_status = @status[ $city_cnt*12 .. $status_cnt + $city_cnt ];
                             grep { s/&nbsp;/waiting/g } @new_status;
-                            p @new_status;
                             $table->addRow($city, @new_status); 
-                            last;
+                            p @new_status;
+                            last LAST;
                         }
                         $city_cnt++;
                         $status_cnt+=11;
                     }
                 }
-                $msg->send("\n"), $msg->send($table);
             }
+                    $msg->send("\n"), $msg->send($table); 
         );
-    $index++;
     }
 }
 
@@ -261,7 +261,6 @@ sub current_process {
  
 =head1 SYNOPSIS
  
-    This is scripts only support korean. 
     weather weekly [city] ... - input city name 
     weather weekly [city1] [city2] [city3] ... - input cities name 
     weather forecast [paldo] (ex: kangwon-do or gyeonggi-do) ... - input city name 
