@@ -148,7 +148,9 @@ sub city_process {
                             }
                         }
                         if ($count == scalar (@citynames)) {
-                            $msg->send("\n"), $msg->send($table);
+                            $msg->send(
+                                ("\n", split /\n/, $table)
+                            );
                         }
                     }
                 );
@@ -189,7 +191,9 @@ sub fore_process {
                 });
                 $table->setCols($paldos{$paldo});
                 for my $cast ( @forecast ) { $table->addRow($cast); }
-                $msg->send("\n"), $msg->send($table);
+                $msg->send(
+                    ("\n", split /\n/, $table)
+                );
                 }
             );
         $caution = 'off';
@@ -248,7 +252,9 @@ sub current_process {
                         $status_cnt+=11;
                     }
                 }
-                $msg->send("\n"), $msg->send($table);
+                $msg->send(
+                    ("\n", split /\n/, $table)
+                );
             }
         );
     $index++;
