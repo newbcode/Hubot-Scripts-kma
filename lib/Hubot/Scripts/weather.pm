@@ -209,7 +209,6 @@ sub current_process {
     my $user_input = $msg->match->[0];
     my @input_cities = split (/ /, $user_input );
     my $last_index = scalar (@input_cities);
-    $msg->send('first' . $index);
 
     for ( ; $index <= $last_index; $index++) { 
         $msg->http("http://www.kma.go.kr/weather/observation/currentweather.jsp")->get(
@@ -246,18 +245,17 @@ sub current_process {
                             @new_status = @status[ $city_cnt*12 .. $status_cnt + $city_cnt ];
                             grep { s/&nbsp;/waiting/g } @new_status;
                             $table->addRow($city, @new_status); 
-                            p @new_status;
                             last LAST;
                         }
                         $city_cnt++;
                         $status_cnt+=11;
                     }
                 }
-                $msg->send(
-                    ("\n", split /\n/, $table)
-                );
+                $msg->send($city_cnt);
+                $msg->send($last_index);
             }
         );
+                $msg->send(("\n", split /\n/, $table));
     }
 }
 
