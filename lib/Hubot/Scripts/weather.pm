@@ -182,17 +182,9 @@ sub fore_process {
                      my $parser = $1; 
                      @forecast = split (/<br \/>/, $parser);
                 }
-
-                my $table = Text::ASCIITable->new({
-                utf8        => 0,
-                headingText => "기상전망($paldos{$paldo}) - [$announcementtime]",
-                cb_count    => sub { mbswidth(shift) },
-                });
-                $table->setCols($paldos{$paldo});
-                for my $cast ( @forecast ) { $table->addRow($cast); }
-                $msg->send(
-                    ("\n", split /\n/, $table)
-                );
+                $msg->send( $paldos{$paldo}.'-'. '기상전망'.
+                    $announcementtime."\n");
+                $msg->send( @forecast);
                 }
             );
         $caution = 'off';
@@ -205,12 +197,13 @@ sub current_process {
     my $msg = shift;
 
     my $index = 1;
-    my $table;
+    my $table_a;
+    my $table_b;
     my $user_input = $msg->match->[0];
     my @input_cities = split (/ /, $user_input );
     my $last_index = scalar (@input_cities);
 
-    for ( ; $index <= $last_index; $index++) { 
+    if ( $last_index == 1 ) {
         $msg->http("http://www.kma.go.kr/weather/observation/currentweather.jsp")->get(
         sub {
                 my ( $body, $hdr ) = @_;
@@ -224,38 +217,59 @@ sub current_process {
                 }
                 my @cities = $decode_body =~ m{<td><a href=".*?">(.*?)</a></td>}gsm;
                 my @status = $decode_body =~ m{<td>(.{1,10})</td>}gsm;
-                my $lc = List::Compare->new(\@input_cities, \@cities);
-                my @citynames = $lc->get_intersection;
 
 
                 my $city_cnt = 0;
                 my $status_cnt = 11; 
                 my @new_status; 
 
-                $table = Text::ASCIITable->new({
+                $table_a = Text::ASCIITable->new({
                 utf8        => 0,
-                headingText => "현재날씨(종합) 기상실황-[$announcementtime]",
+                headingText => "현재날씨 기상실황-[$announcementtime]",
                 cb_count    => sub { mbswidth(shift) },
                 });
-                $table->setCols(qw/지역 현재일기 시정 운량 중하운량 현재기온 이슬점온도 불쾌지수 일강수 습도 풍향 풍속 해면기압/);
+                $table_a->setCols(qw/지역 현재일기 시정 운량 중하운량 현재기온 이슬점온도/);
 
-                for my $input_city ( @citynames ) {
+                $table_b = Text::ASCIITable->new({
+                utf8        => 0,
+                headingText => "현재날씨 기상실황-[$announcementtime]",
+                cb_count    => sub { mbswidth(shift) },
+                });
+                $table_b->setCols(qw/불쾌지수 일강수 습도 풍향 풍속 해면기압/);
+
+                my $table_sw = 'on';
+
                 LAST: for my $city ( @cities ) {
-                        if ( $input_city eq $city ) {
+                        if ( $user_input eq $city ) {
                             @new_status = @status[ $city_cnt*12 .. $status_cnt + $city_cnt ];
                             grep { s/&nbsp;/waiting/g } @new_status;
-                            $table->addRow($city, @new_status); 
+
+                            $table_a->addRow($city, $new_status[0],
+                                    $new_status[1], $new_status[2],
+                                    $new_status[3], $new_status[4],
+                                    $new_status[5],);
+                            $table_b->addRow($new_status[6],
+                                    $new_status[7], $new_status[8],
+                                    $new_status[9], $new_status[10],
+                                    $new_status[11],);
+
                             last LAST;
+                        }
+                        else {
+                            $msg->send($user_input . ' 지역은 기상정보가 없습니다');
+                            $table_sw = 'off';
+                            last;
                         }
                         $city_cnt++;
                         $status_cnt+=11;
                     }
+                $msg->send(("\n", split /\n/, $table_a)) if $table_sw eq 'on';
+                $msg->send(("\n", split /\n/, $table_b)) if $table_sw eq 'on';
                 }
-                $msg->send($city_cnt);
-                $msg->send($last_index);
-            }
         );
-                $msg->send(("\n", split /\n/, $table));
+    }
+    else {
+        $msg->send('지역을 2군데 이상입력 하셨습니다');
     }
 }
 
