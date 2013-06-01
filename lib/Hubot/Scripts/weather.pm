@@ -239,33 +239,27 @@ sub current_process {
 
                 my $table_sw = 'on';
 
-                LAST: for my $city ( @cities ) {
-                        if ( $user_input eq $city ) {
-                            @new_status = @status[ $city_cnt*12 .. $status_cnt + $city_cnt ];
-                            grep { s/&nbsp;/waiting/g } @new_status;
+                for my $city ( @cities ) {
+                    if ( $user_input eq $city ) {
+                        @new_status = @status[ $city_cnt*12 .. $status_cnt + $city_cnt ];
+                        grep { s/&nbsp;/waiting/g } @new_status;
 
-                            $table_a->addRow($city, $new_status[0],
-                                    $new_status[1], $new_status[2],
-                                    $new_status[3], $new_status[4],
-                                    $new_status[5],);
-                            $table_b->addRow($new_status[6],
-                                    $new_status[7], $new_status[8],
-                                    $new_status[9], $new_status[10],
-                                    $new_status[11],);
-
-                            last LAST;
-                        }
-                        else {
-                            $msg->send($user_input . ' 지역은 기상정보가 없습니다');
-                            $table_sw = 'off';
-                            last;
-                        }
-                        $city_cnt++;
-                        $status_cnt+=11;
+                        $table_a->addRow($city, $new_status[0],
+                                $new_status[1], $new_status[2],
+                                $new_status[3], $new_status[4],
+                                $new_status[5],);
+                        $table_b->addRow($new_status[6],
+                                $new_status[7], $new_status[8],
+                                $new_status[9], $new_status[10],
+                                $new_status[11],);
+                        $msg->send(("\n", split /\n/, $table_a));
+                        $msg->send(("\n", split /\n/, $table_b));
+                        $table_sw = 'off';
+                        last;
                     }
-                $msg->send(("\n", split /\n/, $table_a)) if $table_sw eq 'on';
-                $msg->send(("\n", split /\n/, $table_b)) if $table_sw eq 'on';
                 }
+            $msg->send($user_input . ' 지역은 기상정보가 없습니다') if $table_sw eq 'on';
+            }
         );
     }
     else {
