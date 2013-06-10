@@ -45,7 +45,7 @@ sub load {
         \&fore_process,
     );
     $robot->hear(
-        qr/^weather current (.+)/i,    
+        qr/^weather (.+)/i,    
         \&current_process,
     );
 }
@@ -177,14 +177,16 @@ sub fore_process {
                 if ( $decode_body =~ m{<p class="mid_announcementtime fr">.*?<span>(.*?)</span></p>} ) {
                      $announcementtime = $1;
                 }
+
                 my @forecast;
+
                 if ( $decode_body =~ m{<p class="text">(.*?)</p>} ) {
                      my $parser = $1; 
                      @forecast = split (/<br \/>/, $parser);
                 }
                 $msg->send( $paldos{$paldo}.'-'. '기상전망'.
                     $announcementtime."\n");
-                $msg->send( @forecast);
+                $msg->send( @forecast );
                 }
             );
         $caution = 'off';
@@ -196,10 +198,8 @@ sub fore_process {
 sub current_process {
     my $msg = shift;
 
-    my $index = 1;
-    my $table_a;
-    my $table_b;
     my $user_input = $msg->match->[0];
+    return if $user_input =~ "weekly|forecast";
     my @input_cities = split (/ /, $user_input );
     my $last_index = scalar (@input_cities);
 
@@ -221,44 +221,24 @@ sub current_process {
 
                 my $city_cnt = 0;
                 my $status_cnt = 11; 
+                my $city_check = 'on';
                 my @new_status; 
-
-                $table_a = Text::ASCIITable->new({
-                utf8        => 0,
-                headingText => "현재날씨 기상실황-[$announcementtime]",
-                cb_count    => sub { mbswidth(shift) },
-                });
-                $table_a->setCols(qw/지역 현재일기 시정 운량 중하운량 현재기온 이슬점온도/);
-
-                $table_b = Text::ASCIITable->new({
-                utf8        => 0,
-                headingText => "현재날씨 기상실황-[$announcementtime]",
-                cb_count    => sub { mbswidth(shift) },
-                });
-                $table_b->setCols(qw/불쾌지수 일강수 습도 풍향 풍속 해면기압/);
-
-                my $table_sw = 'on';
 
                 for my $city ( @cities ) {
                     if ( $user_input eq $city ) {
+                        ### status는 날씨의 상태를 가지고 있으며 array slice로 다시 새로운 상태array를 만든다.
+                        ### why? *12는 @cities에 들어있는 도시이름이 몇번쨰 index인지 구하고(ex:동두천이면 2번째 인덱스)
+                        ### $status + $city_cnt는 @status에 들어있는 총 index를 구한다. 이것은 웹분석을 통해 만들어낸 규칙.   
                         @new_status = @status[ $city_cnt*12 .. $status_cnt + $city_cnt ];
-                        grep { s/&nbsp;/waiting/g } @new_status;
+                        ### 정보를 받아 오기전에 상태를 waiting로 치환한다.
+                        grep { s/&nbsp;/(Waiting)/g } @new_status;
 
-                        $table_a->addRow($city, $new_status[0],
-                                $new_status[1], $new_status[2],
-                                $new_status[3], $new_status[4],
-                                $new_status[5],);
-                        $table_b->addRow($new_status[6],
-                                $new_status[7], $new_status[8],
-                                $new_status[9], $new_status[10],
-                                $new_status[11],);
-                        $msg->send(("\n", split /\n/, $table_a));
-                        $msg->send(("\n", split /\n/, $table_b));
-                        $table_sw = 'off';
+                        $msg->send("$user_input 지역의 현재일기는[$announcementtime] $new_status[0]상태이며 현재기온은 $new_status[4](도), 불쾌지수는 $new_status[6], 일강수는 $new_status[7](mm), 습도는 $new_status[8](%)입니다." );
+                        $city_check = 'off';
                         last;
                     }
                 }
-            $msg->send($user_input . ' 지역은 기상정보가 없습니다') if $table_sw eq 'on';
+            $msg->send("$user_input 지역은 기상정보가 없습니다") if $city_check eq 'on';
             }
         );
     }
@@ -270,12 +250,20 @@ sub current_process {
 1;
 
 =pod
+
+=head1 Name 
+
+    Hubot::Scripts::weather
  
 =head1 SYNOPSIS
  
-    weather weekly [city] ... - input city name 
-    weather weekly [city1] [city2] [city3] ... - input cities name 
-    weather forecast [paldo] (ex: kangwon-do or gyeonggi-do) ... - input city name 
-    weather current [city] ... input city name 
+    weather <city name>  - View current local area weather information. 
+    weather weekly <city name> - View weekly local area weather information.
+    weather weekly <city name1> <city name2>... - View weekly local areas weather information.
+    weather forecast <local name> - View local weather forecast information. (ex: KangWon-Do, Gyeonggi-Do ..)
+
+=head1 AUTHOR
+
+    YunChang Kang <codenewb@gmail.com>
  
 =cut
