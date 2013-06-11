@@ -218,7 +218,6 @@ sub current_process {
                 my @cities = $decode_body =~ m{<td><a href=".*?">(.*?)</a></td>}gsm;
                 my @status = $decode_body =~ m{<td>(.{1,10})</td>}gsm;
 
-
                 my $city_cnt = 0;
                 my $status_cnt = 11; 
                 my $city_check = 'on';
@@ -229,7 +228,7 @@ sub current_process {
                         ### status는 날씨의 상태를 가지고 있으며 array slice로 다시 새로운 상태array를 만든다.
                         ### why? *12는 @cities에 들어있는 도시이름이 몇번쨰 index인지 구하고(ex:동두천이면 2번째 인덱스)
                         ### $status + $city_cnt는 @status에 들어있는 총 index를 구한다. 이것은 웹분석을 통해 만들어낸 규칙.   
-                        @new_status = @status[ $city_cnt*12 .. $status_cnt + $city_cnt ];
+                        @new_status = @status[ $city_cnt*12 .. $city_cnt*12 + $status_cnt];
                         ### 정보를 받아 오기전에 상태를 waiting로 치환한다.
                         grep { s/&nbsp;/(Waiting)/g } @new_status;
 
@@ -237,7 +236,10 @@ sub current_process {
                         $city_check = 'off';
                         last;
                     }
+                $city_cnt++;
                 }
+            $msg->send("기상제공 지역은 [@cities] 입니다") if $city_check eq 'on';
+            $msg->send("\n") if $city_check eq 'on';
             $msg->send("$user_input 지역은 기상정보가 없습니다") if $city_check eq 'on';
             }
         );
