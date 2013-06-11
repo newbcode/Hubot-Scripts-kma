@@ -67,10 +67,10 @@ sub city_process {
     for my $country ( keys %countris ) {
         for my $cityname ( @citynames ) {
             if ( $countris{$country} =~ /$cityname/ ) {
-            $msg->http("http://www.kma.go.kr/weather/forecast/mid-term_$country.jsp")->get(
+            $msg->http("http://kma.go.kr/weather/forecast/mid-term_$country.jsp")->get(
                     sub {
                         my ( $body, $hdr ) = @_;
-
+                        
                         return if ( !$body || $hdr->{Status} !~ /^2/ );
 
                         my $announcementtime;
