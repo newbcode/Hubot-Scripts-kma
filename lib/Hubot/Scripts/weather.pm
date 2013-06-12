@@ -199,7 +199,7 @@ sub current_process {
     my $msg = shift;
 
     my $user_input = $msg->match->[0];
-    return if $user_input =~ "weekly|forecast";
+    return if $user_input =~ "weekly|forecast|current";
     my @input_cities = split (/ /, $user_input );
     my $last_index = scalar (@input_cities);
 
