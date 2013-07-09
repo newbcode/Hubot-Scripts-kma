@@ -37,15 +37,15 @@ sub load {
     my ( $class, $robot ) = @_;
  
     $robot->hear(
-        qr/^weather weekly (.+)/i,    
+        qr/^kma weekly (.+)/i,    
         \&city_process,
     );
     $robot->hear(
-        qr/^weather forecast (.+)/i,    
+        qr/^kma forecast (.+)/i,    
         \&fore_process,
     );
     $robot->hear(
-        qr/^weather (.+)/i,    
+        qr/^kma (.+)/i,    
         \&current_process,
     );
 }
