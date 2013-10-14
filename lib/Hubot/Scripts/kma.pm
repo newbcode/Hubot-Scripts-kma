@@ -41,7 +41,7 @@ sub load {
         \&city_process,
     );
     $robot->hear(
-        qr/^kma forecast (.+)/i,    
+        qr/^kma -f (.+)/i,    
         \&fore_process,
     );
     $robot->hear(
@@ -172,20 +172,23 @@ sub fore_process {
 
                 return if ( !$body || $hdr->{Status} !~ /^2/ );
 
-                my $announcementtime = $1;
+                my $announcementtime;
+                my $caster;
                 my $decode_body = decode("euc-kr", $body);
-                if ( $decode_body =~ m{<p class="mid_announcementtime fr">.*?<span>(.*?)</span></p>} ) {
+                if ( $decode_body =~ m{<p class="mid_announcementtime fr">.*?<span>(.*?)</span>} ) {
                      $announcementtime = $1;
                 }
 
-                my @forecast;
+                if ( $decode_body =~ m{<span>\((.*?)\)</span>} ) {
+                     $caster = $1;
+                }
 
+                my @forecast;
                 if ( $decode_body =~ m{<p class="text">(.*?)</p>} ) {
                      my $parser = $1; 
                      @forecast = split (/<br \/>/, $parser);
                 }
-                $msg->send( $paldos{$paldo}.'-'. '기상전망'.
-                    $announcementtime."\n");
+                $msg->send("기상전망[$paldos{$paldo}]".'-'.$announcementtime."[$caster]"."\n");
                 $msg->send( @forecast );
                 }
             );
@@ -244,9 +247,6 @@ sub current_process {
             }
         );
     }
-    else {
-        $msg->send('지역을 2군데 이상입력 하셨습니다');
-    }
 }
 
 1;
@@ -261,10 +261,8 @@ sub current_process {
 
     Korea Meteorological Administration provides information to the script.
  
-    kma <city name>  - View current local area weather information. 
-    kma weekly <city name> - View weekly local area weather information.
-    kma weekly <city name1> <city name2>... - View weekly local areas weather information.
-    kma forecast <local name> - View local weather forecast information. (ex: KangWon-Do, Gyeonggi-Do ..)
+    kma <city>  - View current local area weather information. 
+    kma -f <city> - View weather forecast information. (ex: KangWon-Do, Gyeonggi-Do ..)
 
 =head1 AUTHOR
 
